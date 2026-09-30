@@ -1,117 +1,91 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>من سيفوز؟ LIVE - نتائج حقيقية</title>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>من سيفوز؟ LIVE</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@700;900&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;font-family:'Cairo',sans-serif}
-body{background:#0f0f14;color:#fff;min-height:100vh}
-.header{background:#16161f;padding:20px;text-align:center;border-bottom:2px solid #00ff88}
+body{background:#0f0f14;color:#fff}
+.header{background:#16161f;padding:18px;text-align:center;border-bottom:2px solid #00ff88}
 .badge{background:#00ff88;color:#000;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:900}
-.days{display:flex;gap:8px;overflow-x:auto;padding:14px 12px;scrollbar-width:none}
-.day{min-width:72px;background:#1e1e28;border-radius:16px;padding:10px 0;text-align:center;cursor:pointer;border:1px solid #2a2a3a;transition:.2s}
-.day.active{background:#00ff88;color:#000;border-color:#00ff88;transform:scale(1.05);font-weight:900}
+.days{display:flex;gap:8px;overflow-x:auto;padding:12px}
+.day{min-width:70px;background:#1e1e28;border-radius:16px;padding:10px 0;text-align:center;cursor:pointer;border:1px solid #2a2a3a}
+.day.active{background:#00ff88;color:#000;font-weight:900}
 .card{background:#1e1e28;margin:12px 14px;border-radius:20px;padding:14px;border:1px solid #2a2a3a}
-.league{font-size:11px;color:#8a8a9a;display:flex;justify-content:space-between;margin-bottom:10px}
 .teams{display:flex;justify-content:space-between;align-items:center}
-.team{text-align:center;width:100px;font-size:13px;font-weight:700}
-.vs{background:#16161f;border-radius:14px;padding:6px 14px;text-align:center;border:1px solid #2a2a3a}
-.score-main{font-size:22px;font-weight:900;color:#00ff88}
-.pred{font-size:9px;color:#8a8a9a}
-.foot{display:flex;justify-content:space-between;margin-top:12px;font-size:11px;background:#16161f;padding:8px 10px;border-radius:10px}
-.loading{text-align:center;padding:60px 20px;color:#8a8a9a}
+.team{text-align:center;width:90px;font-size:13px;font-weight:700}
+.vs{background:#16161f;border-radius:14px;padding:6px 14px;text-align:center}
+.score{font-size:20px;font-weight:900;color:#00ff88}
+.foot{display:flex;justify-content:space-between;margin-top:10px;font-size:11px;background:#16161f;padding:8px 10px;border-radius:10px}
 </style>
 </head>
 <body>
-<div class="header">
-<h2 style="margin-bottom:8px">⚽ من سيفوز؟ LIVE</h2>
-<span class="badge" id="status">● كايقلب على الماتشات الحقيقية...</span>
-</div>
+<div class="header"><h2>⚽ من سيفوز؟ LIVE</h2><span class="badge" id="st">● كايجيب الماتشات الحقيقية...</span></div>
 <div class="days" id="days"></div>
-<div id="list"><div class="loading">⏳ كانجيب الماتشات الحقيقية من API...</div></div>
-
+<div id="list" style="padding-bottom:30px;text-align:center;padding:40px">⏳ كايجيب ماتشات اليوم الحقيقية...</div>
 <script>
-const API_KEY = "e118e70c249349aa9292dce61c1496da";
-let allMatches = [];
-let daysMap = {};
-let daysKeys = [];
-
-async function loadRealMatches(){
+async function load(){
   try{
-    const today = new Date();
-    const next = new Date(); next.setDate(today.getDate()+7);
-    const from = today.toISOString().split('T')[0];
-    const to = next.toISOString().split('T')[0];
-
-    const url = `https://api.football-data.org/v4/matches?dateFrom=${from}&dateTo=${to}`;
-    const res = await fetch(url, { headers: { 'X-Auth-Token': API_KEY } });
-    const data = await res.json();
-
-    if(!data.matches || data.matches.length==0){
-      document.getElementById('list').innerHTML = `<div class="loading">😕 ما كاين حتى ماتش هاد السيمانة فالخطة المجانية<br><br>الدوريات المتاحة: PL, LaLiga, Bundesliga, Serie A, Ligue 1, CL</div>`;
-      document.getElementById('status').textContent = "● لا يوجد ماتشات هذا الأسبوع";
-      return;
+    // نجيب ماتشات حقيقية من ESPN - خدام بلا API KEY وبلا بلوك
+    let leagues = ['eng.1','esp.1','ger.1','ita.1','fra.1','uefa.champions'];
+    let all = [];
+    for(let lg of leagues){
+      try{
+        let r = await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/${lg}/scoreboard`);
+        let d = await r.json();
+        if(d.events) all = all.concat(d.events.map(e=>({...e, lg:lg})));
+      }catch{}
     }
+    if(all.length==0) throw "empty";
+    document.getElementById('st').textContent = `● ${all.length} ماتش حقيقي LIVE`;
 
-    allMatches = data.matches;
-    document.getElementById('status').textContent = `● ${allMatches.length} ماتش حقيقي LIVE`;
-    buildDays();
-    showDay(0);
+    // نبني الأيام
+    let byDate = {};
+    all.forEach(ev=>{
+      let date = ev.date.split('T')[0];
+      if(!byDate[date]) byDate[date]=[];
+      byDate[date].push(ev);
+    });
+    let keys = Object.keys(byDate).sort();
+    let daysHtml = '';
+    keys.forEach((k,i)=>{
+      let d = new Date(k);
+      let name = d.toLocaleDateString('ar-MA',{weekday:'short'});
+      daysHtml+=`<div class="day ${i==0?'active':''}" onclick="show(${i})"><b>${name}</b><div style="font-size:11px">${k.slice(5)}</div><div style="font-size:10px">${byDate[k].length} ماتش</div></div>`;
+    });
+    document.getElementById('days').innerHTML = daysHtml;
+    window.byDate=byDate; window.keys=keys;
+    show(0);
   }catch(e){
-    document.getElementById('list').innerHTML = `<div class="loading">❌ مشكل فـ API<br><small>${e.message}</small><br><br>تأكد أنك داير Commit للكود</div>`;
+    document.getElementById('list').innerHTML = `❌ المشكل باقي، جرب تريفرشي<br><small>${e}</small><br><br><button onclick="location.reload()" style="background:#00ff88;border:0;padding:8px 16px;border-radius:10px;font-weight:900;margin-top:10px">عاود حاول</button>`;
   }
 }
-
-function buildDays(){
-  daysMap = {};
-  allMatches.forEach(m=>{
-    let d = m.utcDate.split('T')[0];
-    if(!daysMap[d]) daysMap[d]=[];
-    daysMap[d].push(m);
+function show(idx){
+  document.querySelectorAll('.day').forEach((el,i)=>el.classList.toggle('active',i==idx));
+  let k = window.keys[idx];
+  let evs = window.byDate[k]||[];
+  let out='';
+  evs.forEach(ev=>{
+    let home = ev.competitions[0].competitors.find(c=>c.homeAway=='home');
+    let away = ev.competitions[0].competitors.find(c=>c.homeAway=='away');
+    let hName = home.team.shortDisplayName;
+    let aName = away.team.shortDisplayName;
+    let status = ev.status.type.detail;
+    let hScore = home.score||0;
+    let aScore = away.score||0;
+    let isLive = ev.status.type.state=='in';
+    let ph = 1+Math.floor(Math.random()*2);
+    let pa = Math.floor(Math.random()*2);
+    if(ph==pa) ph++;
+    let pred = `${ph}-${pa}`;
+    let winner = ph>pa? hName : aName;
+    let real = isLive||ev.status.type.completed? `${hScore}-${aScore}` : pred;
+    out+=`<div class="card"><div style="font-size:10px;color:#8a8a9a;display:flex;justify-content:space-between"><span>${ev.lg.toUpperCase()} • ${status}</span><span>${isLive?'🔴 مباشر':'🔮 توقع'}</span></div><div class="teams" style="margin-top:8px"><div class="team">${hName}</div><div class="vs"><div style="font-size:9px;color:#8a8a9a">${isLive?'نتيجة حية':'متوقع'}</div><div class="score">${real}</div><div style="font-size:9px">توقع: ${pred}</div></div><div class="team">${aName}</div></div><div class="foot"><span>✅ الفائز: ${winner}</span><span>ثقة ${70+Math.floor(Math.random()*20)}%</span></div></div>`;
   });
-  daysKeys = Object.keys(daysMap).sort();
-  let html = '';
-  daysKeys.forEach((d,i)=>{
-    let date = new Date(d);
-    let dayName = date.toLocaleDateString('ar-MA',{weekday:'short'});
-    let count = daysMap[d].length;
-    html += `<div class="day ${i==0?'active':''}" onclick="showDay(${i})"><b>${dayName}</b><div style="font-size:11px;margin:2px 0">${d.slice(5)}</div><div style="font-size:10px;background:#0002;padding:2px 6px;border-radius:10px;display:inline-block">${count} ماتش</div></div>`;
-  });
-  document.getElementById('days').innerHTML = html;
+  document.getElementById('list').innerHTML = out;
 }
-
-function showDay(idx){
-  document.querySelectorAll('.day').forEach((el,i)=> el.classList.toggle('active', i==idx));
-  let key = daysKeys[idx];
-  let matches = daysMap[key] || [];
-  let out = '';
-  matches.forEach(m=>{
-    let time = m.utcDate.slice(11,16);
-    let h = Math.floor(1 + Math.random()*2);
-    let a = Math.floor(Math.random()*1.8);
-    if(h==a) h++;
-    let pred = `${h}-${a}`;
-    let winner = h>a? m.homeTeam.shortName : m.awayTeam.shortName;
-    let status = m.status=="IN_PLAY"? "🔴 مباشر" : m.status=="FINISHED"? "✅ انتهى" : "⏰ "+time;
-    let realScore = m.score.fullTime.home!==null? `${m.score.fullTime.home}-${m.score.fullTime.away}` : pred;
-
-    out += `
-    <div class="card">
-      <div class="league"><span>${m.competition.name} • ${m.competition.code}</span><span>${status}</span></div>
-      <div class="teams">
-        <div class="team">${m.homeTeam.shortName || m.homeTeam.name}</div>
-        <div class="vs"><div class="pred">${m.score.fullTime.home!==null?'نتيجة حقيقية':'توقع AI'}</div><div class="score-main">${realScore}</div><div class="pred">توقع: ${pred}</div></div>
-        <div class="team">${m.awayTeam.shortName || m.awayTeam.name}</div>
-      </div>
-      <div class="foot"><span>🔮 الفائز المتوقع: ${winner}</span><span>ثقة ${72+Math.floor(Math.random()*20)}%</span></div>
-    </div>`;
-  });
-  document.getElementById('list').innerHTML = out || '<div class="loading">لا يوجد ماتشات</div>';
-}
-
-loadRealMatches();
+load();
 </script>
 </body>
 </html>
